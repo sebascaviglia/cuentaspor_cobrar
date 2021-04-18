@@ -1,0 +1,98 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# markov chain 
+library(markovchain)
+# cuentas por cobrar
+
+#cargamos los estados posibles
+
+estados1 <- c("0-30", "31-90", "pagado", "incobrable")
+
+matriz1 <- matrix(data = c(0.30,0.30,0.40,0.00,
+                           0.30,0.10,0.40,0.20,
+                           0.00,0.00,1.00,0.00,
+                           0.00,0.00,0.00,1.00),byrow = T, nrow = 4)
+colnames(matriz1) <- estados1
+rownames(matriz1) <- estados1
+
+cuentascobrar <- new("markovchain",transitionMatrix = matriz1)
+```
+
+```{r}
+library(diagram)
+
+plotmat(t(cuentascobrar@transitionMatrix), box.lwd =1.5, box.size = 0.05, box.col ='light yellow', box.cex = 0.70,
+box.type='diamond', shadow.size = 0, txt.col ='blue', txt.frot = 4, arr.col='red', arr.width = 0.2 , arr.length = 0.25, arr.type = 'triangle',  arr.lwd =1.2, arr.lcol = 'red', cex.txt =0.75, curve= 0.05, self.cex=0.8, self.shiftx = c(-0.03,-0.03,-0.09),self.shifty = c(-0.06,-0.06,+0.00),self.arrpos = c(1.5*pi,1.5*pi,0.5*pi), main= "Diagrama de transicion : cuentas por cobrar", cex = 1.2)
+```
+```{r}
+#pedimos un summary para ver la estructura
+summary(cuentascobrar)
+```
+```{r}
+# tiempos esperados en estados transitorios
+# tiempo esperado en el estado j iniciando en estado i
+
+n <-  matriz1[transientStates(cuentascobrar),transientStates(cuentascobrar)]
+
+#creo matriz identidad para buscar los estados no absorbentes
+
+I <- diag(length(transientStates(cuentascobrar)))
+
+# calculo la inversa para saber los tiempoes esperados Te
+Te <- solve(I-n)
+
+Te
+
+colnames(Te) <- transientStates(cuentascobrar)
+rownames(Te) <- transientStates(cuentascobrar)
+
+###tiempo esperado para la absorcion
+# condicionado a estado inicial
+
+#creo vector
+uno <- matrix(rep(1,length(transientStates(cuentascobrar))),
+              nrow = length(transientStates(cuentascobrar)))
+# aplico operador matricial
+
+Ta <- Te%*%uno
+colnames(Ta) <- "abosorcion"
+
+Ta
+
+# partiendo de 0-30 en promedio tardo 2.22 en llegar a pagado o incobrable 
+# si parto de 31-90  promedio tardo 1.85 en llegar a pagado o incobrable 
+```
+```{r}
+#probabilidades de Absorcion
+#probabilidad  de absorcion en cada EA, condicionado  a estado inicial
+
+A <- matriz1[transientStates(cuentascobrar),absorbingStates(cuentascobrar)]
+
+PA <- Te%*%A
+PA
+# concluyo que la deuda 0-30 tiene 0,88 de ser pagada y 0,11 de pasar a incobrable
+#mientas que las 31-90 existe una Probabilidad de ser pagad solo 0.74 y 0.25 de pasar a incobrable
+
+# ejemplo con montos
+# teniendo un saldo de 1000 ARS en 0-30 y 2000 ars en 31-90 podria esperar que
+montoinicial <- c(1000,2000)
+
+montoabs <- montoinicial%*%PA
+montoabs
+
+# concluyo que de la deuda de 3000 ars , se cobrarian 2370 y 629 pasarian a incobrables
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
